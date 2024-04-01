@@ -1,0 +1,7 @@
+{
+  "window.zoomLevel": 0,
+  "editor.mouseWheelZoom": true,
+  "terminal.integrated.mouseWheelZoom": false,
+  "editor.fontFamily": "'JetBrains Mono', 'Courier New', monospace, 'SauceCodePro NF'",
+  "editor.fontSize": 14
+}
