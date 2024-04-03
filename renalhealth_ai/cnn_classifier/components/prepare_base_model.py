@@ -1,49 +1,63 @@
 from pathlib import Path
-import tensorflow as tf
+from torchvision import models
+from torch import (
+    device as torch_device,
+    cuda as torch_cuda,
+    save as torch_save,
+    nn,
+)
+from torchsummary import summary
 from cnn_classifier.entity.config_entity import PrepareBaseModelConfig
 
 
 class PrepareBaseModel:
     def __init__(self, config: PrepareBaseModelConfig):
         self.config = config
+        self.device = torch_device(
+            "cuda" if torch_cuda.is_available() else "cpu"
+        )
 
     def get_base_model(self):
-        self.model = tf.keras.applications.vgg16.VGG16(
-            input_shape=self.config.params_image_size,
-            weights=self.config.params_weights,
-            include_top=self.config.params_include_top,
-        )
+        self.model = models.vgg16(
+            weights=self.config.params_weights
+        ).to(self.device)
+        if not self.config.params_include_top:
+            self.model.classifier = nn.Sequential(
+                *list(self.model.classifier.children())[:-1]
+            )
 
         self.save_model(path=self.config.base_model_path, model=self.model)
 
     @staticmethod
-    def _prepare_full_model(model, classes, freeze_all, freeze_till, learning_rate):
+    def _prepare_full_model(
+        model,
+        classes,
+        freeze_all,
+        freeze_till,
+        img_size,
+        device,
+    ):
         if freeze_all:
-            for layer in model.layers:
-                layer.trainable = False
+            for param in model.parameters():
+                param.requires_grad = False
         elif (freeze_till is not None) and (freeze_till > 0):
-            for layer in model.layers[:freeze_till]:
-                layer.trainable = False
+            for param in model.parameters()[:freeze_till]:
+                param.requires_grad = False
 
-        flatten_in = tf.keras.layers.Flatten()(model.output)
-        prediction = tf.keras.layers.Dense(
-            units=classes,
-            activation="softmax",
-        )(flatten_in)
+        last_layer = None
+        for layer in model.classifier.children():
+            if isinstance(layer, nn.Linear):
+                last_layer = layer
+        if last_layer is None:
+            raise ValueError("No linear layer found in the classifier.")
+        num_features = last_layer.in_features
+        
+        model.classifier.append(nn.Linear(num_features, classes).to(device))
+        model.classifier.append(nn.Softmax(dim=1).to(device)) 
 
-        full_model = tf.keras.models.Model(
-            inputs=model.input,
-            outputs=prediction,
-        )
-
-        full_model.compile(
-            optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate),
-            loss=tf.keras.losses.CategoricalCrossentropy(),
-            metrics=["accuracy"],
-        )
-
-        full_model.summary()
-        return full_model
+        print(model)
+        summary(model, tuple(reversed(img_size)))
+        return model
 
     def update_base_model(self):
         self.full_model = self._prepare_full_model(
@@ -51,12 +65,15 @@ class PrepareBaseModel:
             classes=self.config.params_classes,
             freeze_all=True,
             freeze_till=None,
-            learning_rate=self.config.params_learning_rate,
+            img_size=self.config.params_image_size,
+            device=self.device,
         )
 
-        self.save_model(path=self.config.updated_base_model_path,
-                        model=self.full_model)
+        self.save_model(
+            path=self.config.updated_base_model_path,
+            model=self.full_model
+        )
 
     @staticmethod
-    def save_model(path: Path, model: tf.keras.Model):
-        model.save(path)
+    def save_model(path: Path, model: models):
+        torch_save(model, path)
