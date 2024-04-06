@@ -1,0 +1,118 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: python renalhealth_ai/cnn_classifier/pipeline/stage_01_data_ingestion.py
+    deps:
+    - path: config/config.yaml
+      hash: md5
+      md5: 8e4a40ee05689b37908814c3ca171b1f
+      size: 604
+    - path: renalhealth_ai/cnn_classifier/pipeline/stage_01_data_ingestion.py
+      hash: md5
+      md5: 4bb12073fc70f84f81ec8cafda9c52c8
+      size: 825
+    outs:
+    - path: artifacts/data_ingestion/kidney-dataset
+      hash: md5
+      md5: 480f02db6967e2017d804fca0430c1a4.dir
+      size: 1661580918
+      nfiles: 12446
+  prepare_base_mode:
+    cmd: python renalhealth_ai/cnn_classifier/pipeline/stage_02_prepare_base_model.py
+    deps:
+    - path: config/config.yaml
+      hash: md5
+      md5: 8e4a40ee05689b37908814c3ca171b1f
+      size: 604
+    - path: renalhealth_ai/cnn_classifier/pipeline/stage_02_prepare_base_model.py
+      hash: md5
+      md5: 5291ccb43e3017ae7f91dec719ca227c
+      size: 869
+    params:
+      params.yaml:
+        CLASSES: 4
+        IMAGE_SIZE:
+        - 224
+        - 224
+        - 3
+        INCLUDE_TOP: false
+        LEARNING_RATE: 0.02
+        WEIGHTS: imagenet
+    outs:
+    - path: artifacts/prepare_base_model
+      hash: md5
+      md5: a5fe65215fd728ada14145b354d6be32.dir
+      size: 1074193188
+      nfiles: 2
+  training:
+    cmd: python renalhealth_ai/cnn_classifier/pipeline/stage_03_model_training.py
+    deps:
+    - path: artifacts/data_ingestion/kidney-dataset
+      hash: md5
+      md5: 480f02db6967e2017d804fca0430c1a4.dir
+      size: 1661580918
+      nfiles: 12446
+    - path: artifacts/prepare_base_model
+      hash: md5
+      md5: a5fe65215fd728ada14145b354d6be32.dir
+      size: 1074193188
+      nfiles: 2
+    - path: config/config.yaml
+      hash: md5
+      md5: 8e4a40ee05689b37908814c3ca171b1f
+      size: 604
+    - path: renalhealth_ai/cnn_classifier/pipeline/stage_03_model_training.py
+      hash: md5
+      md5: 1300345ddc94b8731d0250e86b1b2b35
+      size: 823
+    params:
+      params.yaml:
+        AGUMENTATION: true
+        BATCH_SIZE: 16
+        EPOCHS: 2
+        IMAGE_SIZE:
+        - 224
+        - 224
+        - 3
+    outs:
+    - path: artifacts/training/model_state_dict.pt
+      hash: md5
+      md5: 6263fc60b9bc31ddc7ebf904bb75b729
+      size: 537119674
+  evaluation:
+    cmd: python renalhealth_ai/cnn_classifier/pipeline/stage_04_model_evaluation.py
+    deps:
+    - path: artifacts/data_ingestion/kidney-dataset
+      hash: md5
+      md5: 480f02db6967e2017d804fca0430c1a4.dir
+      size: 1661580918
+      nfiles: 12446
+    - path: artifacts/prepare_base_model
+      hash: md5
+      md5: a5fe65215fd728ada14145b354d6be32.dir
+      size: 1074193188
+      nfiles: 2
+    - path: artifacts/training/model_state_dict.pt
+      hash: md5
+      md5: 6b82de562820b6da6fbc887fbc59a1e0
+      size: 537119674
+    - path: config/config.yaml
+      hash: md5
+      md5: 8e4a40ee05689b37908814c3ca171b1f
+      size: 604
+    - path: renalhealth_ai/cnn_classifier/pipeline/stage_04_model_evaluation.py
+      hash: md5
+      md5: 23ef5c2cf1e5b80185f3d8036895777c
+      size: 781
+    params:
+      params.yaml:
+        BATCH_SIZE: 16
+        IMAGE_SIZE:
+        - 224
+        - 224
+        - 3
+    outs:
+    - path: scores.json
+      hash: md5
+      md5: acc026df21c4856eac53226f7e77d598
+      size: 73

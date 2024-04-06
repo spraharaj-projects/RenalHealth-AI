@@ -5,7 +5,8 @@ from typing import List
 
 @dataclass
 class DataIngestionConfig:
-    """Class to hold the data ingestion configuration parameters
+    """
+    Class to hold the data ingestion configuration parameters
     """
     root_dir: Path
     source_URL: str
@@ -15,7 +16,8 @@ class DataIngestionConfig:
 
 @dataclass(frozen=True)
 class PrepareBaseModelConfig:
-    """Class to hold the prepare base model configuration parameters
+    """
+    Class to hold the prepare base model configuration parameters
     """
     root_dir: Path
     base_model_path: Path
@@ -29,10 +31,11 @@ class PrepareBaseModelConfig:
 
 @dataclass(frozen=True)
 class TrainingConfig:
-    """Class to hold the training configuration parameters
+    """
+    Class to hold the training configuration parameters
     """
     root_dir: Path
-    trained_model_path: Path
+    trained_model_state_dict_path: Path
     updated_base_model_path: Path
     training_data: Path
     params_epochs: int
@@ -40,3 +43,18 @@ class TrainingConfig:
     params_is_agumentation: bool
     params_image_size: List[int]
     params_learning_rate: float
+
+
+@dataclass(frozen=True)
+class EvaluationConfig:
+    """
+    Class to hold the evaluation configuration parameters
+    """
+    model_path: Path
+    model_state_dict_path: Path
+    training_data: Path
+    all_params: dict
+    mlflow_uri: str
+    params_image_size: list
+    params_batch_size: int
+    params_learning_rate: int
